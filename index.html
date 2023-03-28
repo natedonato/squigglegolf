@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./style.css">
+  <link rel="shortcut icon" href="./favicon.ico" type="image/x-icon">
+  <title>Squiggle Golf</title>
+</head>
+
+<body>
+  <main class="splash">
+
+    <img id="icon" src="./img/hole1.jpeg" alt="Squiggle Golf">
+    <h1>Squiggle Golf</h1>
+    <p>A squiggly web golf game by <a href="https://www.natedonato.com">Nate Donato</a>.</p>
+    <a class="playbutton" href="./game">
+      <span class="playbutton__shadow"></span>
+      <span class="edge"></span>
+      <span class="playbutton__face">
+        Play the beta now!
+      </span>
+    </a>
+    <p>Squiggle Golf is a free 2D mini golf game with a hand-drawn, sketchy graphic style that you can play right here
+      in your
+      web browser.
+    </p>
+    
+    <p>
+      With a randomly generated daily course, a suite of premade courses (coming soong), and a custom level editor (coming soong), there's always a
+      new challenge waiting for you in Squiggle Golf!</p>
+      <video class="vid" autoplay="" loop="" muted="" playsinline="" src="./howto.mov" onclick="this.play()"></video>
+    </main>
+    <footer>
+      <p>Made with JavaScript, HTML Canvas, Rough.js, and Matter.js</p>
+      <p><a href="https://twitter.com/SquiggleGolf">Follow us on Twitter for updates</a></p>
+      <!-- <p class="tagline">A game by <a href="https://www.natedonato.com">Nate Donato</a>.</p> -->
+  </footer>
+
+  <script>
+    let icon = document.getElementById('icon')
+    setInterval(changeImg, 1500);
+    let i = 1
+    function changeImg() {
+      i += 1;
+      i %= 19;
+      if (i === 0) { i = 1 }
+      icon.src = './img/hole' + i + '.jpeg'
+    }
+  </script>
+</body>
+
+</html>

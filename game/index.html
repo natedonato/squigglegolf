@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NateGolf</title>
+  <link href="https://fonts.googleapis.com/css?family=Gloria+Hallelujah&display=block" rel="stylesheet" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <script src="./matter.js"></script>
+  <script src="./rough.js"></script>
+  <script src="./decomp.js"></script>
+  <script src="./seedrandom.min.js">
+</script>
+
+<style>
+  /* fonts */
+@import url("https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Handlee&display=swap");
+
+@import url("https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Handlee&display=swap");
+h1,
+.playbutton {
+  font-family: "Indie Flower", cursive;
+}
+
+.playbutton {
+  font-weight: 600;
+}
+
+body {
+  font-family: "Handlee";
+}
+
+  *{
+    box-sizing: border-box;
+  }
+  body,
+  html {
+    /* overflow: hidden; */
+    height: 100%;
+    /* margin: 5px; */
+    margin-bottom: 100px;
+  }
+
+  .canvas-container {
+    position: relative;
+    display: block;
+    margin: 2vh auto;
+    margin-top: calc(50vh - 45vmin);
+    max-width: min(100%, 90vmin, 800px);
+    max-height: min(100%, 90vmin, 800px);
+    width: auto;
+    height: auto;
+  }
+
+  #canvas-overlay {
+    /* display: none; */
+    position: absolute;
+
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+  }
+
+  #tutorial{
+    display: none;
+    text-align: center;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 1);
+    padding: 5%;
+    border: 1px solid #cccccc;
+    line-height: 2.5vmin;
+  }
+
+  #back{
+    cursor: pointer;
+  }
+  #back:hover{
+    opacity: 0.8
+  }
+
+  #splash {
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 5%;
+
+  }
+
+  .vid{
+    width: 70%;
+    height: auto;
+    border: 1px dashed blue
+  }
+
+  .menubutton:hover {
+    cursor: pointer;
+    fill: green;
+  }
+
+  canvas {
+    /* display: block;
+    margin: 2vh auto;
+    max-width: min(100%, 90vw, 800px);
+    max-height: min(100%, 90vmin); */
+    width: 100%;
+    height: auto;
+    border: 1px solid black;
+  }
+</style>
+
+</head>
+
+<body>
+
+  <div class="canvas-container">
+    <div id="canvas-overlay">
+
+      <div id="splash">
+        <svg viewBox="0 0 150 26" style="font-family: 'Indie Flower'">
+          <text x="0" y="15">Squiggle Golf</text>
+        </svg>
+        <svg viewBox="0 0 400 70">
+          <text fill="#555555" x="0" y="15">Version 0.40 alpha</text>
+        </svg>
+        <svg viewBox="0 0 400 30">
+          <text id="playbtn" class="menubutton" x="0" y="15">• Play today's course!</text>
+        </svg>
+        <svg viewBox="0 0 420 30">
+          <text id="howtobtn" class="menubutton" x="0" y="15">• How to play</text>
+        </svg>
+      </div>
+
+      <div id="tutorial">
+
+        <video class="vid" autoplay loop muted playsinline src="./howto.mov" onclick="this.play()"></video>
+        <br />
+        <br />
+        <br />
+        <br />
+        <svg viewBox="0 0 420 30">
+          <text x="0" y="15">1. Click and drag to aim</text>
+        </svg>
+        <svg viewBox="0 0 420 30">
+          <text x="0" y="15">2. Release to hit</text>
+        </svg>
+        <svg viewBox="0 0 420 30">
+          <text x="0" y="15">3. Aim for the hole!</text>
+        </svg>
+          <br />
+          <br />
+        <svg viewBox="0 0 420 30">
+          <text id="back" fill="green" x="0" y="15">&lt;== Back to menu</text>
+        </svg>
+
+     
+      </div>
+
+
+
+    </div>
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <div id="date"></div>
+  <br>
+  <div>Welcome to Squiggle Golf! (work in progress)</div>
+  <br>
+  <div>A brand new course is generated daily. <br> Made with Matter.js, Rough.js, ❤️ + ☕.<br><br> By <a href="https://www.natedonato.com">Nate Donato</a>.</div>
+  <br><a id="yesterday">Play yesterday's course</a>
+  <br>
+  <button class="add-button">Add Squiggle Golf PWA to homescreen!</button>
+
+</body>
+
+<script>
+
+// register PWA
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').then(() => { console.log('Service Worker Registered'); });;
+  }
+
+
+  // Add to homescreen button
+  let deferredPrompt;
+  const addBtn = document.querySelector('.add-button');
+  addBtn.style.display = 'none';
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent Chrome 67 and earlier from automatically showing the prompt
+    e.preventDefault();
+    // Stash the event so it can be triggered later.
+    deferredPrompt = e;
+    // Update UI to notify the user they can add to home screen
+    addBtn.style.display = 'block';
+
+    addBtn.addEventListener('click', () => {
+      // hide our user interface that shows our A2HS button
+      addBtn.style.display = 'none';
+      // Show the prompt
+      deferredPrompt.prompt();
+      // Wait for the user to respond to the prompt
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted the A2HS prompt');
+        } else {
+          console.log('User dismissed the A2HS prompt');
+        }
+        deferredPrompt = null;
+      });
+    });
+  });
+
+
+
+
+// NateGolf, an experimental browser game.  We'll see how it goes...
+
+  let overlay = document.getElementById('canvas-overlay')
+  // ui logic
+  document.getElementById('playbtn').onclick = () => {
+    playing = true;
+    overlay.style.display = "none";
+  }
+
+  document.getElementById('back').onclick = () => {
+    document.getElementById("splash").style.display = "block";
+    document.getElementById("tutorial").style.display = "none";
+  }
+  
+
+  document.getElementById('howtobtn').onclick = () => {
+    document.getElementById("splash").style.display = "none";
+    document.getElementById("tutorial").style.display = "block";
+  }
+
+
+// begin seed logic
+
+  let seed = new Date();
+  const urlParams = new URLSearchParams(window.location.search);
+
+  let code = urlParams.get('date');
+  if (code && code.length > 0) {
+    seed = new Date(code * 1000)
+  }
+
+  let lastSeed = new Date();
+  lastSeed.setTime(seed.getTime() - (24 * 60 * 60 * 1000));
+
+  let rng = new Math.seedrandom(seed.toLocaleDateString("en"));
+  document.getElementById('date').textContent = seed.toLocaleDateString("en");
+
+  document.getElementById('yesterday').setAttribute("href", `?date=${parseInt(lastSeed.getTime() / 1000).toFixed(0)}`)
+
+  let nateRand = () => rng.quick();
+
+  // gets value between X and Y at A%
+  const lerp = (x, y, a) => x * (1 - a) + y * a;
+
+  // clamps A to within bounds
+  const clamp = (a, min = 0, max = 1) => Math.min(max, Math.max(min, a));
+
+  // look up what percentage between X and Y value A is found at
+  const invlerp = (x, y, a) => clamp((a - x) / (y - x));
+
+  // given range x1y1, and second range x2y2, find where value A would lie if it was on the second range
+  const range = (x1, y1, x2, y2, a) => lerp(x2, y2, invlerp(x1, y1, a));
+
+
+      // utility functions
+  function between(min, max) {
+    return Math.floor(nateRand() * (max + 1 - min) + min);
+  }
+
+  function dist(bod1, bod2) {
+    return Math.sqrt((bod1.position.x - bod2.position.x) ** 2 + (bod1.position.y - bod2.position.y) ** 2);
+  }
+  // end seed logic
+
+
+
+
+
+
+
+  // begin Engine setup
+  const Engine = Matter.Engine,
+    Common = Matter.Common,
+    Render = Matter.Render,
+    // Runner = Matter.Runner,
+    Bodies = Matter.Bodies,
+    Body = Matter.Body,
+    Composites = Matter.Composites,
+    Composite = Matter.Composite,
+    // MouseConstraint = Matter.MouseConstraint,
+    Constraint = Matter.Constraint,
+    Vector = Matter.Vector,
+    Vertices = Matter.Vertices,
+    Events = Matter.Events;
+    Common.setDecomp(decomp);
+
+  const engine = Engine.create();
+
+  // end Engine setup
+
+  let playing = false;
+
+
+
+
+
+  // general level creation setup
+  
+    // setting level dimensions
+  let width = 2400;
+  let height = 2400;
+
+  width = 2200;
+  height = 2200;
+
+
+  // function generateEntities(){
+
+    // randomly generates one standard platform and position
+    function randomGround() {
+      let w = between(250, 450)
+      let h = between(50, 90);
+      let y = between(height / 4, height - h - height/12)
+      let x = between(w / 2 + 100, width - w / 2 - 100)
+      nid += 1;
+
+      let plat = Bodies.rectangle(x, y, w, h, {
+        isStatic: true,
+        render: {
+          id: nid,
+          fill: null,
+          stroke: 'black',
+          fillStyle: 'none',
+          type: "ground"
+        }
+      });
+      plat.restitution = 0.4,
+      plat.friction = 0.01;
+      return plat;
+    }
+
+
+  // set up hole stuff
+  // makes one putting green and detector
+  function hole(){
+    let w = between(350, 550)
+    let h = between(140, 240);
+
+    let holeW = between(55, 85)
+    let holeH = between(75,85)
+    let edge = 50;
+
+    let holeX = between(edge, w-holeW - edge);
+
+    let slightOffset = 15;
+
+    let mediumOffset = 50;
+
+    let corners = [{x: 0, y: between(-slightOffset, slightOffset),},
+      {x: holeX, y: 0},
+      {x: holeX, y: holeH + between(0,slightOffset)},
+      {x: holeX + holeW, y: holeH + between(0,slightOffset)} ,
+      {x: holeX+holeW, y: between(-slightOffset, slightOffset)},
+      {x: w + between(-mediumOffset, mediumOffset), y: between(-slightOffset, slightOffset),},
+      {x: w + between(-mediumOffset, mediumOffset),y:h + between(-slightOffset, slightOffset)},
+      {x: 0 + between(-mediumOffset, mediumOffset), y: h}
+    ];
+
+    let holeVertices = corners;
+    
+    let myHole = Bodies.fromVertices(0,0, holeVertices,{ isStatic: true, render:{type: "hole", id:"hole"}})
+    myHole.restitution = 0.3;
+    myHole.friction = 0.001;
+    
+
+    let detector = Bodies.fromVertices(0, 0, [holeVertices[1], holeVertices[2], holeVertices[3], holeVertices[4]], { isStatic: true, isSensor: true, render: { type: 'detector', id: 'detector', fill: 'black', stroke: "black" }  })
+    let detectorCentre = Vertices.centre(detector.vertices)
+    
+    return [myHole, detector,holeVertices];
+  }
+
+ 
+
+  function clearOverlap(A, B, airspace, hole){
+
+
+    A = A.bounds;
+    B = B.bounds;
+
+    let r1 = {right: A.max.x, left: A.min.x, bottom: A.max.y, top: A.min.y - airspace}
+    let r2 = {right: B.max.x, left: B.min.x, bottom: B.max.y, top: B.min.y}
+
+    if(hole){
+      r1.right += 150
+      r1.left -= 150;
+      r1. bottom += 150; 
+    }
+
+    function intersectRect(r1, r2) {
+      return !(r2.left > r1.right ||
+        r2.right < r1.left ||
+        r2.top > r1.bottom ||
+        r2.bottom < r1.top);
+    }
+
+    return intersectRect(r1,r2);
+
+    
+    // clear airspace
+    let minX1 = boundsA.min.x;
+    let maxX1 = boundsA.max.x;
+  
+    let minX2 = boundsB.min.x;
+    let maxX2 = boundsB.max.x;
+    
+    let minY1 = boundsA.min.y - airspace;
+    let maxY1 = boundsA.max.y;
+
+    
+    let minY2 = boundsB.min.y;
+    let maxY2 = boundsB.max.y;
+
+    
+    let overX = true;
+    let overY = true;
+
+
+    if( (minX2 >= maxX1 || maxX2 <= minX1) ){
+      // overlapping horizontally
+      overX = false;
+    }
+    if( (minY2 >= maxY1 || maxY2 <= minY1) ){
+      // overlapping vertically
+      overY = false;
+    }
+
+    
+
+    if(overX && overY  ){
+      return true
+    }else{
+      return false
+    }
+  }
+
+  function checkOverlap(radius, Xc, Yc, rect) {
+
+    let X1 = rect.bounds.min.x;
+    let X2 = rect.bounds.max.x;
+
+    let Y1 = rect.bounds.min.y;
+    let Y2 = rect.bounds.max.y;
+
+    // Find the nearest point on the
+    // rectangle to the center of
+    // the circle
+    let Xn = Math.max(X1, Math.min(Xc, X2));
+    let Yn = Math.max(Y1, Math.min(Yc, Y2));
+
+    // Find the distance between the
+    // nearest point and the center
+    // of the circle
+    // Distance between 2 points,
+    // (x1, y1) & (x2, y2) in
+    // 2D Euclidean space is
+    // ((x1-x2)**2 + (y1-y2)**2)**0.5
+    let Dx = Xn - Xc;
+    let Dy = Yn - Yc;
+    return (Dx * Dx + Dy * Dy) <= radius * radius;
+  }
+
+
+  let Cx, Cy;
+  let clickPos = { x: null, y: null }
+  let mousePos = { x: null, y: null }
+
+
+
+  // reset ball position
+  function reset() {
+    if(playing){
+
+      attempts += 1;
+      pastPoints.push([...points]);
+      points = []
+      redrawBg();
+      // render();
+
+      clickPos = { x: null, y: null }
+      mousePos = { x: null, y: null }
+
+
+      if(attempts > 5 && playing){
+        playing = false;
+        setTimeout(
+          () => handleEnd("death"),
+          20
+        )
+      }else{
+        Body.setVelocity(ball, { x: 0, y: 0 })
+        Body.setPosition(ball, { x: Cx, y: Cy })
+      }
+    }
+  }
+
+  let spikeHeights = [];
+  let points = [];
+  let pastPoints = [];
+  let pastDeaths = [];
+  let scribbles = [];
+  let strokes = 0;
+  let totalStrokes = 0;
+
+  let attempts = 1;
+
+  let platforms, myHole, detector, ball, holeVertices, gs = null;
+  let nid;
+
+  let currentHole = 0;
+  let sunk = false;
+
+  function loadLevel(JSON){
+    sunk = false;
+
+    spikeHeights = [];
+    currentHole += 1;
+    points = [];
+    pastPoints = [];
+    scribbles = [];
+    strokes = 0;
+
+    attempts = 1;
+    nid = 1;
+  }
+
+  function resetLevel(){
+    sunk = false;
+
+    spikeHeights = [];
+    currentHole += 1;
+    points = [];
+    pastPoints = [];
+    scribbles = [];
+    strokes = 0;
+
+    attempts = 1;
+    nid = 1;
+
+    platforms = [];
+
+    for (let i = 0; i < between(5, 20); i++) {
+    // for (let i = 0; i < 2; i++) {
+      platforms.push(randomGround());
+    }
+
+    platforms = platforms.sort((a, b) => a.position.x - b.position.x)
+
+
+
+
+    // replace this with a better function that generates a start and finish, and deletes any platforms in their "airspace"
+
+       
+    let searching = true;
+    while (searching) {
+
+      platforms = platforms.sort((a, b) => a.position.x - b.position.x)
+
+      searching = false;
+
+      if(platforms.length < 2){platforms.push(randomGround());}
+
+      for(let i = 1; i < platforms.length; i++ ){
+        if (clearOverlap(platforms[0], platforms[i], 300) === true) {
+        searching = true;
+        platforms[i] = null;
+
+        // platforms[i].render.stroke = "yellow"
+
+      }
+
+      platforms = platforms.filter(el => el !== null);
+
+
+      for (let i = 0; i < platforms.length-1; i++) {
+          if (clearOverlap(platforms[platforms.length-1], platforms[i], 500, true)) {
+            platforms[i] = null;
+            searching = true;
+            
+            // platforms[i].render.stroke = "yellow"
+
+          }
+      }
+
+      platforms = platforms.filter(el => el !== null);
+    }
+
+  }
+
+
+
+
+
+
+    let rad = 20;
+
+    Cx = platforms[0].position.x
+    Cy = platforms[0].position.y - 3 * rad;
+
+
+
+
+    ball = Bodies.circle(Cx, Cy, rad, {
+      restitution: 0,
+      friction: 1,
+      density: 0.004,
+      render: {
+        track: true,
+        type: "ball",
+      }
+    })
+
+    Body.setInertia(ball, Infinity);
+
+    Body.setMass(ball, 1.17559968);
+
+
+    platforms[0].render.fill = "red";
+    Body.scale(platforms[0],1.2,1);
+
+    // move Hole and detector into position
+    [myHole, detector, holeVertices] = hole();
+
+    Body.setPosition(myHole, platforms[platforms.length - 1].position);
+
+
+    //get hole vertices
+    let allVertices = [];
+    myHole.parts.forEach(p => allVertices.push(...p.vertices));
+    let seen = [];
+    let vertices = [];
+
+    allVertices.forEach(p => {
+      if(seen[p.x+"%"+p.y] === undefined){
+        vertices.push(p)
+        seen[p.x + "%" + p.y] = true;
+      }
+    })
+
+    let min = vertices.sort((a,b) => a.x - b.x )[0].x
+    let min2 = [...holeVertices].sort((a,b) => a.x - b.x )[0].x
+    
+    let offsetX = min2 - min;
+    min = vertices.sort((a,b) => a.y - b.y )[0].y
+    min2 = [...holeVertices].sort((a,b) => a.y - b.y )[0].y
+
+    let offsetY = min2 - min;
+
+    holeVertices = holeVertices.map(el => ({ x: el.x - offsetX, y: el.y - offsetY }));
+
+    let centre = Vertices.centre([holeVertices[1], holeVertices[2], holeVertices[3], holeVertices[4]]);
+
+    Body.setPosition(detector, {
+      x: detector.position.x + centre.x,
+      y: detector.position.y + centre.y
+    });
+
+    platforms.pop();
+    
+    myHole.render.fill = "green";
+    // myHole.render.stroke = "darkgreen";
+
+
+
+    for(let i = 1; i < platforms.length; i++){
+      let p = platforms[i]
+      
+      // ice
+      if(between(1,4) === 1){
+        p.render.stroke = 'aqua';
+        p.render.fill = 'aqua';
+        p.restitution = 0.75;
+        p.friction = 0.003;
+      }
+
+      //sand
+      if(between(1,4) === 1){
+        p.render.stroke = "orange"
+        p.render.fill = "#EDC9AF"
+        p.restitution = 0.1;
+        p.friction = 0.09; 
+      }
+
+
+
+    }
+
+
+
+
+
+    Composite.clear(engine.world);
+
+
+    let wallLeft = Bodies.rectangle(-40, height/2, 80, height, {
+      isStatic: true,
+      restitution: 0.7,
+      friction: 0,
+      render: {
+        id: "wall",
+        fill: null,
+        stroke: "transparent",
+        fillStyle: "none",
+        type: "ground"
+      }
+    });
+    let wallRight = Bodies.rectangle(width + 40, height/2, 80, height, {
+      isStatic: true,
+      restitution: 0.7,
+      friction: 0,
+      render: {
+        id: "wall",
+        fill: null,
+        stroke: "transparent",
+        fillStyle: "none",
+        type: "ground"
+      }
+    });
+    let wallTop = Bodies.rectangle(width / 2, -40, width, 80, {
+      isStatic: true,
+      restitution: 0.7,
+      friction: 0,
+      render: {
+        id: "wall",
+        fill: null,
+        stroke: null,
+        fillStyle: "transparent",
+        type: "ground"
+      }
+    });
+
+    wallLeft.restitution = 0.5;
+    wallLeft.friction = 0;  
+    wallRight.restitution = 0.5;
+    wallRight.friction = 0;
+    wallTop.restitution = 0.5;
+    wallTop.friction = 0;
+    
+     Composite.add(engine.world, [
+      ...platforms,
+      ball,
+      myHole,
+      detector,
+      wallLeft,
+      wallRight,
+      wallTop,
+    ]);
+
+    gs = {};
+
+
+
+
+
+
+
+
+    return [platforms, myHole, detector, ball, holeVertices, gs]
+  }
+
+  resetLevel();
+
+
+
+  // create runner
+  // let runner = Runner.create({ isFixed: true });
+
+  // run the engine
+  // Runner.run(runner, engine);
+
+
+  /** @type {HTMLCanvasElement} */
+  const canvas = document.getElementById('canvas');
+
+  const rc = rough.canvas(canvas);
+
+  let generator = rc.generator;
+
+  ctx = canvas.getContext('2d');
+  canvas.width = width;
+  canvas.height = height;
+
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = '#ff0';
+  ctx.fillStyle = '#000';
+
+
+
+   // make pagelines
+    let lines = generator.rectangle(0, 0, canvas.width, canvas.height, { stroke: 'transparent', fill: "rgba(0, 0, 255, 0.29)", hachureAngle: 90, strokeWidth: 10, fillWeight: 5, hachureGap: 65, seed: between(0,10000), roughness: 0.8 })
+
+    //hidden canvas?
+  const h_canvas = document.createElement('canvas');
+  h_canvas.width = width;
+  h_canvas.height = height;
+  const h_ctx = h_canvas.getContext('2d');
+  const h_rc = rough.canvas(h_canvas);
+
+  //screenshot canvas
+  const s_canvas = document.createElement('canvas');
+  s_canvas.width = canvas.width;
+  s_canvas.height = canvas.height;
+  const s_ctx = s_canvas.getContext('2d');
+
+  s_ctx.fillStyle = "white";
+  s_ctx.fillRect(0,0,canvas.width, canvas.height);
+
+
+  function drawSpikes(){
+    let w = width / 60;
+    
+    h_ctx.fillStyle = "red"
+
+    height = height + w;
+    for(let i = 0; i * w < width; i++){
+
+      h_ctx.beginPath();
+      h_ctx.moveTo(w * i, height);
+      if(!spikeHeights[i]){
+        spikeHeights[i] = between(25, 30) / 10 * w
+      }
+      
+      h_ctx.lineTo(w*i + w /2, height - spikeHeights[i]);
+      h_ctx.lineTo(w * i + w, height);
+      h_ctx.fill()
+
+
+
+    }
+    height = height - w;
+
+
+  }
+
+
+  function redrawBg(death){
+    h_ctx.clearRect(0,0,width,height);
+    h_rc.draw(lines)
+    drawSpikes();
+
+
+
+    // plot past points
+    h_ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+    pastPoints.forEach(line => {
+      line.forEach(point => {
+          h_ctx.beginPath();
+          h_ctx.arc(point.x, point.y, 4, 2 * Math.PI, false);
+          h_ctx.fill()
+      })
+    })
+  
+  }
+
+  redrawBg();
+
+ 
+  let prevTime = new Date();
+
+  let fps = 0;
+  function render() {
+
+    let currTime = new Date();
+    fps = 1000 / (currTime - prevTime);
+    prevTime = currTime;
+
+    // clear previous
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(h_canvas, 0,0)
+
+
+    ctx.strokeStyle = "black"
+    ctx.lineWidth = 1
+
+    // get bodies
+    let bodies = Composite.allBodies(engine.world);
+
+    for (let i = 0; i < bodies.length; i += 1) {
+      let nextBody = bodies[i];
+      ctx.beginPath();
+      let vertices = bodies[i].vertices;
+
+
+
+
+      if (nextBody.render.track === true) {
+        let center = Vertices.centre(vertices);
+        if (points.length < 1) {
+          points.push(center);
+        }
+        let dist = Math.sqrt((center.x - points[points.length - 1].x) ** 2 + (center.y - points[points.length - 1].y) ** 2);
+        
+        let unitV = [center.x - points[points.length - 1].x, center.y - points[points.length - 1].y].map(el => el / dist)
+        
+        while (dist >= 15) {
+
+          let nextPoint = {}
+          nextPoint.x = unitV[0] * 15 + points[points.length - 1].x
+          nextPoint.y = unitV[1] * 15 + points[points.length - 1].y
+          points.push(nextPoint);
+          dist = Math.sqrt((center.x - points[points.length - 1].x) ** 2 + (center.y - points[points.length - 1].y) ** 2);
+
+          h_ctx.fillStyle = "black";
+          h_ctx.beginPath();
+          h_ctx.arc(nextPoint.x, nextPoint.y, 4, 2 * Math.PI, false);
+          h_ctx.fill()
+          // dist = Math.sqrt((center.x - points[points.length - 1].x) ** 2 + (center.y - points[points.length - 1].y) ** 2);
+          
+        }
+      }
+
+
+
+
+      if(nextBody.render.type ==="detector"){
+        //dont render
+        // let id = nextBody.render.id;
+
+        // if (gs[id] === undefined) {
+        //     let g = generator.polygon(vertices.map(el => [el.x, el.y]), {
+        //     stroke: "black", 
+        //     strokeWidth: 3,
+        //     fillWeight: 4,
+        //     // fill: nextBody.render.fill,
+        //     fill: "#13331b",
+        //     fillStyle: nextBody.render.fillStyle,
+        //     seed: between(1, 99999)
+        //   });
+
+        //   gs[id] = g;
+        // }
+
+        // rc.draw(gs[id]);
+
+      }else if (nextBody.render.type === "ground") {
+        let id = nextBody.render.id;
+
+        if (gs[id] === undefined) {
+          let g = generator.polygon(vertices.map(el => [el.x, el.y]), {
+            stroke: nextBody.render.stroke, strokeWidth: 3,
+            fill: nextBody.render.fill,
+            seed: between(1, 99999)
+          });
+
+          gs[id] = g;
+        }
+
+        rc.draw(gs[id]);
+
+      } else if(nextBody.render.type === "hole") {
+        
+        let id = nextBody.render.id;
+
+        if (gs[id] === undefined) {
+          let g = generator.polygon(holeVertices.map(el => [el.x, el.y]), {
+            stroke: nextBody.render.stroke, 
+            strokeWidth: 3,
+            fill: nextBody.render.fill,
+            fillStyle: nextBody.render.fillStyle,
+            seed: between(1, 99999)
+          });
+
+          gs[id] = g;
+        }
+
+        rc.draw(gs[id]);
+
+        // draw flag
+
+        let slope = (holeVertices[5].y-holeVertices[4].y) / (holeVertices[5].x - holeVertices[4].x)
+        let flagPos = [ holeVertices[4].x + 5, holeVertices[4].y + 5 * slope ];
+        rc.line(flagPos[0], flagPos[1], flagPos[0], flagPos[1] - 200, { strokeWidth: 3 })
+
+        rc.polygon(
+          [
+          [flagPos[0], flagPos[1] - 200], 
+          [flagPos[0] + 80, flagPos[1] - 170], 
+          [flagPos[0], flagPos[1] - 140]
+      ],{
+        strokeWidth: 3,
+        fill: !sunk ? 'rgba(255,0,0,0.7)' : 'green', 
+        fillStyle: "solid", }
+          )
+        // }
+      }else{
+
+
+
+
+        // ball
+     
+
+      }
+
+    }
+
+
+    // draw ball
+    ctx.fillStyle = 'black';
+    ctx.strokeStyle = 'black'
+    ctx.lineWidth = 3;
+    let vertices = ball.vertices;
+    ctx.beginPath();
+    ctx.moveTo(vertices[0].x, vertices[0].y);
+    for (let j = 1; j < vertices.length; j += 1) {
+      ctx.lineTo(vertices[j].x, vertices[j].y);
+    }
+    ctx.lineTo(vertices[0].x, vertices[0].y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    if(ball.position.y > height - width/30 || ball.position.x < 0 || ball.position.x > width){
+
+
+      reset();
+    }
+
+
+    //text
+    if(playing){
+      ctx.fillStyle = "black";
+      ctx.font = '52px Gloria Hallelujah'
+      ctx.fillText(
+        `Hole ${currentHole} / 9. Current strokes: ${strokes}`,
+        100,100
+        )
+        let lives = ""
+        
+        ctx.fillStyle = "red";
+        ctx.font = '82px Gloria Hallelujah'
+        ctx.fillText(`${"♡".repeat(attempts-1)}${"♥".repeat(5-attempts+1)}`,width - 500,120)
+        // ctx.strokeStyle = "black";
+        // ctx.strokeText(`${"♡".repeat(attempts-1)}${"♥".repeat(5-attempts+1)}`,width - 500,120)
+
+      if (fps >= 50) {
+        ctx.fillStyle = "green";
+      } else if (fps >= 40) {
+        ctx.fillStyle = "yellow"
+      } else {
+        ctx.fillStyle = "red"
+      }
+
+      // ctx.fillText(
+      //   `fps: ${Math.floor(fps)}`,
+      //   100, 200
+      // )
+    }else{
+      // end screen stuff?
+
+    }
+      
+
+    // aim line arrow
+    if(clickPos.x !== null && mousePos.x !== null && playing){
+    let dist = Math.sqrt((clickPos.x - mousePos.x) ** 2 + (clickPos.y - mousePos.y) ** 2);
+    let max = 400
+
+    if (dist > max) {
+      dist = max;
+    }
+
+    dist = (dist) / max
+
+    let angle = -Math.atan2(clickPos.y - mousePos.y, clickPos.x - mousePos.x)
+    let x = Math.cos(angle);
+    let y = Math.sin(angle);
+    x = x * 500.0 * dist
+    y = y * 500.0 * dist
+    let arrowL = 50
+    let p2x = arrowL * Math.cos(angle + 4*Math.PI/5)
+    let p2y = arrowL * Math.sin(angle + 4*Math.PI/5)
+    let p3x = arrowL * Math.cos(angle + 6*Math.PI/5)
+    let p3y = arrowL * Math.sin(angle + 6*Math.PI/5)
+
+    ctx.beginPath();
+    ctx.strokeStyle = "red"
+    if(bombCount < 1){
+      ctx.strokeStyle = "grey"
+    }
+    // rc.line(clickPos.x, clickPos.y, clickPos.x + x, clickPos.y - y,{stroke: ctx.strokeStyle, strokeWidth: 5, roughness: 1})
+    // rc.line(clickPos.x + x + p2x, clickPos.y - y - p2y, clickPos.x + x, clickPos.y - y,{stroke: ctx.strokeStyle, strokeWidth: 5, roughness: 1})
+    // rc.line(clickPos.x + x + p3x, clickPos.y - y - p3y, clickPos.x + x, clickPos.y - y,{stroke: ctx.strokeStyle, strokeWidth: 5, roughness: 1})
+
+    rc.line(ball.position.x, ball.position.y, ball.position.x + x, ball.position.y - y,{stroke: ctx.strokeStyle, strokeWidth: 5, roughness: 1})
+    rc.line(ball.position.x + x + p2x, ball.position.y - y - p2y, ball.position.x + x, ball.position.y - y,{stroke: ctx.strokeStyle, strokeWidth: 5, roughness: 1})
+    rc.line(ball.position.x + x + p3x, ball.position.y - y - p3y, ball.position.x + x, ball.position.y - y,{stroke: ctx.strokeStyle, strokeWidth: 5, roughness: 1})
+
+
+
+    }
+
+
+  }
+
+      document.body.appendChild(document.createElement('br'))
+
+
+
+  let currentTime = performance.now();
+  let physicsBuffer = 0;
+  let physicsStep = 16;
+
+
+  function gameLoop(){ 
+    if(currentHole < 10) {
+    //get time in ms since last frame
+    let newTime = performance.now();
+    let frameTime = newTime - currentTime;
+    currentTime = newTime;
+
+    // add time since last frame to physics buffer
+    physicsBuffer += frameTime;
+
+    while (physicsBuffer >= physicsStep) {
+      Engine.update(engine, physicsStep);
+      physicsBuffer -= physicsStep;
+      // t += physicsStep;
+      // console.log(steps)
+    }
+
+    // Engine.update(engine, 1000 / 60);
+    render()
+
+    window.requestAnimationFrame(gameLoop);
+    }
+  }
+  window.requestAnimationFrame(gameLoop);
+
+
+  let bombCount = 2;
+  
+
+  // collision sounds
+  Events.on(engine, "collisionStart", (e) => {
+    let pairs = e.pairs;
+    for (i = 0; i < pairs.length; i++) {
+      pair = pairs[i];
+      // console.log(pair)
+      if(pair.bodyA.render?.type === 'ball' || pair.bodyB.render?.type === 'ball'){
+        // console.log(pair.collision.depth);
+        let d = clamp(pair.collision.depth, 0,7);
+
+        d = range(0, 7, 0.5, 1, d);
+        console.log(d)
+
+        // if(pair.collision.depth > 1){
+        //   console.log('bounce2');
+        // }
+      }
+      if (!pair.isActive){continue};
+
+
+
+    }
+
+  })
+
+
+  Events.on(engine, "collisionActive", (e) => {
+    let pairs = e.pairs;
+    // console.log(pairs)
+
+    for(let i = 0; i < pairs.length; i++){
+      if(bombCount < 2 && ball.velocity.x ** 2 < 0.001 && ball.velocity.y ** 2 < 0.0001 && (pairs[i].bodyA.render?.type === 'ball' ||  pairs[i].bodyB.render?.type === 'ball')){
+        bombCount = 2;
+        Matter.Sleeping.set(ball, true)
+      }
+
+      if ((pairs[i].bodyA.render?.type === 'detector' || pairs[i].bodyB.render?.type === 'detector') && (pairs[i].bodyA.render?.type === 'ball' || pairs[i].bodyB.render?.type === 'ball')) {
+        if(ball.velocity.x ** 2 < 0.001 && ball.velocity.y ** 2 < 0.001 && playing ){
+          if(detector.bounds.min.y <= ball.position.y )
+          {
+            playing = false;
+            sunk = true;
+            render();
+            setTimeout(handleEnd, 100)
+          }
+
+        }
+      }
+
+
+    }
+  })
+
+  async function handleEnd(reason){
+
+
+    // if not finished
+      if(reason === "death"){
+        alert("💀 You died too many times 💀 - score of 12")
+        strokes = 12;
+      }else{
+        if(strokes === 1){
+          alert("⛳ You scored a hole in one!! ⛳")
+        }else{
+          alert(`You finished the hole in ${strokes} strokes!`);
+        }
+      }
+
+    clickPos = { x: null, y: null }
+    mousePos = { x: null, y: null }
+
+    totalStrokes += strokes;
+
+
+    // record hole score
+    let scoreDiv = document.createElement('div')
+    document.body.appendChild(document.createElement('br'))
+    scoreDiv.innerText = `Hole ${currentHole} score: ${strokes}`
+    document.body.appendChild(scoreDiv);
+    playing = false;
+
+    let url = canvas.toDataURL();
+    let img = new Image();
+    await new Promise(r => img.onload = r, img.src = url);
+    // let gutter =(s_canvas.width - (s_canvas.width / 4) * 3) / 4;
+    // s_ctx.drawImage(img,
+    // ((currentHole-1) % 3) * ((s_canvas.width / 4) + gutter) + gutter, 
+    // Math.floor((currentHole - 1) /3 ) * (s_canvas.height / 4 + gutter) + gutter,
+    // s_canvas.width/4,s_canvas.height/4);
+    s_ctx.drawImage(img,
+    ((currentHole-1) % 3) * ((s_canvas.width / 3)), 
+    Math.floor((currentHole - 1) /3 ) * (s_canvas.height / 3),
+    s_canvas.width/3,
+    s_canvas.height/3);
+    
+    if(currentHole < 9){
+      resetLevel();
+      redrawBg();
+      playing = true;
+    }else{
+      document.body.appendChild(document.createElement('br'))
+
+      let finalScoreDiv = document.createElement('div')
+      finalScoreDiv.innerText = `Course total: ${totalStrokes} strokes`
+      document.body.appendChild(finalScoreDiv);
+
+      
+      ctx.putImageData(s_ctx.getImageData(0,0,s_canvas.width, s_canvas.height),0,0)
+      currentHole += 2
+      
+      alert(`you finished the entire course in ${totalStrokes} strokes, congrats!`);
+    }
+
+  }
+
+  handleEnd = handleEnd.bind(this);
+
+
+  clickPos = {x: null, y: null}
+  mousePos = {x: null, y: null}
+
+  canvas.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    clickPos = getMousePos(canvas, e);
+    // console.log("mouseDown", clickPos)
+
+    canvas.style.cursor = "pointer";
+  });
+
+  canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      clickPos = getMousePos(canvas, e);
+    // console.log("mouseDown", clickPos)
+  }, { passive: false });
+
+  document.addEventListener("mousemove",e=>{
+    if(clickPos.x !== null){
+      mousePos = getMousePos(canvas, e);
+    }
+  })
+
+  canvas.addEventListener("touchmove",e=>{
+    e.preventDefault();
+    if(clickPos.x !== null){
+      mousePos = getMousePos(canvas, e);
+    }
+  }, { passive: false })
+
+  document.addEventListener("mouseup", 
+    mouseUp
+  )
+  document.addEventListener("touchend", 
+    mouseUp
+  )
+
+  function mouseUp(e){
+    canvas.style.cursor = "default"
+    if(mousePos.x === null){
+      return;
+    }
+
+    // let mousePos = getMousePos(canvas, e);
+    let ballPos = ball.position;
+    let dist = Math.sqrt((clickPos.x - mousePos.x) ** 2 + (clickPos.y - mousePos.y) ** 2);
+    let max = 400
+
+    if (dist > max) {
+      dist = max;
+    }
+
+    if (dist < 25) {
+      dist = 25;
+    }
+
+    dist = (dist) / max
+
+    let angle = -Math.atan2(clickPos.y - mousePos.y, clickPos.x - mousePos.x)
+
+
+    let x = Math.cos(angle);
+    let y = Math.sin(angle);
+
+    x = x * 16 * 0.01 * dist
+    y = y * 16 * 0.01 * dist
+
+    if(bombCount > 0 && playing){
+    Matter.Sleeping.set(ball, false)
+
+    Body.applyForce(ball, ball.position, { x: x, y: -y })
+    strokes += 1;
+    bombCount -= 1;
+    }
+
+    clickPos = {x: null,y: null}
+    mousePos = {x: null,y: null}
+  }
+
+  //explosion scribbles, depricated
+  function scribblePoints(x, y, size, num) {
+    let points = [];
+
+    let path = new Path2D();
+
+    for (let i = 0; i < num; i++) {
+      let point = { x: x + between(-size / 2, size / 2), y: y + between(-size / 2, size / 2) }
+      points.push(point);
+    }
+
+    path.moveTo(points[0].x, points[0].y);
+
+    for (let i = 1; i < points.length; i++) {
+      path.lineTo(points[i].x, points[i].y);
+    }
+
+    return path;
+  }
+
+  // get relative coordinate of mouse 
+  function getMousePos(canvas, evt) {
+    let rect = canvas.getBoundingClientRect();
+    
+    return {
+      x: ((evt.clientX || evt.targetTouches[0].pageX) - rect.left) / (rect.right - rect.left) * canvas.width,
+      y: ((evt.clientY || evt.targetTouches[0].pageY) - rect.top) / (rect.bottom - rect.top) * canvas.height
+    };
+  }
+
+</script>
+
+
+</html>
