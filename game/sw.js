@@ -10,7 +10,7 @@ const contentToCache = [
   '/game/seedrandom.min.js',
 ]
 
-const cacheName = "nategolf-v0.39a";
+const cacheName = "nategolf-v0.41a";
 
 console.log("cachename", cacheName)
 
