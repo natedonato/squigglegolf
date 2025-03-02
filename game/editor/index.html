@@ -289,8 +289,6 @@
   // end canvas setup
 
 
-
-
   // rendering utility functions
   // draw spkes along bottom of page
   function drawSpikes() {
@@ -349,7 +347,7 @@
       }
       
       // render shape
-      if (nextBody.render.type === "shape") {
+      if (nextBody.render.type === "shape" || nextBody.render.type === "ground" || nextBody.render.type === "hole") {
         let id = nextBody.render.id;
         let parts = nextBody.parts
         let outerVertices = []
@@ -358,7 +356,7 @@
         if (gs[id] === undefined) {
           let g = generator.polygon(nextBody.render.points.map(el => [el.x, el.y]), {
             stroke: nextBody.render.stroke, strokeWidth: 3,
-            fillStyle: nextBody.render.fillStyle,
+            fillStyle: nextBody.render.fillStyle || "hachure",
             fill: nextBody.render.fill,
             seed: between(1, 99999),
           });
